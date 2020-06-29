@@ -1,0 +1,298 @@
+'''
+Description:
+            Get random pts` singel direciton descriptor:a blue line.
+            Plot all axis
+            
+Note that:
+            Test img is actually edged around with black color. 
+            Some times None type bug happens,surprise !
+To do:
+            Make binary divide more
+Date:
+            2019/10/07
+'''
+import cv2
+import numpy as np
+import random
+import math
+# concise number measure
+from decimal import Decimal
+# fraction used in equation
+from fractions import Fraction
+import heapq
+
+def generateRandomPoints(number,img):
+    """
+    Description:
+        Generate random points,if it is black collect it,already tested in a for range unit test,
+    a maximum recursion depth would occur if depth is over 1000.
+
+    Param:
+        number:candidates for choosing,int
+        
+        img: a binary img
+        
+    Return:
+        collectedPts: selected pts(if it is white),a list with tuple in it
+    """
+    assert number>0, "maybe a none-zero number?"
+    # sample some random pts through the whole img
+    randPts = random.sample([(i,j) for i in range(img.shape[0]) for j in range(img.shape[1])], number)
+    collectedPts = []
+    for i in randPts:
+        if img[i[0]][i[1]] == 255:
+            collectedPts.append(i)
+##            print(img[i[0]][i[1]])
+    # note that we cast some pts,then judge it if it is black,so casted could all be white
+    if len(collectedPts) < 1:
+        # use a self iteration to avoid collecting an empty pts list
+        ret = generateRandomPoints(number,img)
+        # remember to ret values,otherwise errs occur
+        return ret
+    else:
+        # works fine get into this statement
+        return collectedPts
+
+def growthWithFixedPattern(img,startAt,pattern,color,thickness=2):
+    """
+    Description:
+        Growth with a given pattern until edge(black)
+    Param:
+        img: a gray img
+        
+        startAt: initial pt:a random pt
+        
+        patternGrowth: growth action
+        
+        pattern: a pattern used for giving direction of growth
+        
+        color: (B,G,R)
+        
+        thickness: draw line thickness
+   
+    """
+    start = startAt
+    while True:
+        coord = ptGrowth(start,pattern)
+        start = coord
+        try:
+            if imgTestGray[start[0]][start[1]] == 0:
+##                print('[Info] reached the edge.')
+                cv2.line(imgTest,(startAt[1],startAt[0]),(start[1],start[0]),color,2)
+                return start
+        except Exception:
+            print('[Warning] something wrong happened!Can not find the edge!')
+            
+
+            
+def distanceOfTwoPts(pt1,pt2):
+    """
+    Description:
+        Distance of two pts
+    Param:
+        pt1:an array
+        
+        pt2:an array
+
+    Return:
+        distance:a int-likely number
+    """
+    diff = np.array(pt1) - np.array(pt2)
+    distance = math.hypot(diff[0],diff[1])
+    return distance
+
+
+def calculateTwoEdgeDistance(a,b,pt):
+    """
+    Description:
+        Calculate four edge growths` path length,we need max two to generate direction descriptor
+    
+    Param:
+        a,b:pattern
+        
+    Return:
+        pt1,pt2,distance
+        
+    """
+    pt1 = growthWithFixedPattern(imgTest,pt,a,green,thickness=2)
+    pt2 = growthWithFixedPattern(imgTest,pt,b,green,thickness=2)
+    return pt1,pt2,distanceOfTwoPts(pt1,pt2)
+
+def drawMiddlePt(pair1,pair2,color1,color2):
+    """
+    Description:
+        With four coords,we get two centers of two pairs,visualize the pt and line
+    
+    Param:
+        pair1,pair2:two growth paths` edge pts
+        
+    Return:
+        equation ready-to-use coords 
+        
+    """
+    middlePt = lambda a,b:((a[0]+b[0])/2,(a[1]+b[1])/2)
+    pt1 = middlePt(pair1[0],pair2[0])
+    pt2 = middlePt(pair1[1],pair2[1])
+    cv2.circle(imgTest,(int(pt1[1]),int(pt1[0])), 8, color1, -1)
+    cv2.circle(imgTest,(int(pt2[1]),int(pt2[0])), 8, color1, -1)
+    cv2.line(imgTest,(int(pt1[1]),int(pt1[0])),(int(pt2[1]),int(pt2[0])),color1,5)
+    
+    pt3 = middlePt(pair1[0],pair2[1])
+    pt4 = middlePt(pair1[1],pair2[0])
+    cv2.circle(imgTest,(int(pt3[1]),int(pt3[0])), 8, color2, -1)
+    cv2.circle(imgTest,(int(pt4[1]),int(pt4[0])), 8, color2, -1)
+    cv2.line(imgTest,(int(pt3[1]),int(pt3[0])),(int(pt4[1]),int(pt4[0])),color2,5)
+
+    return ((pt1,pt2),(pt3,pt4))
+
+def growth(startPt,euqation,color,randPt):
+    """
+    Description:
+        Growth from origin pt to edge according to equation
+    
+    Param:
+        startPt: start point
+        equation: one of two option
+        color: draw the growth path
+        
+    Return:
+        
+        
+    """
+    pair1 = (None,None)
+    pair2 = (None,None)
+    start = startPt
+    while True:
+        start += 1#
+        if start < 0 or euqation(start) < 0 or start > 399 or euqation(start) >299: 
+            break
+##        print((start,euqation(start)),end=' ') # check the growth coords if u want to
+        imgTest[int(start)][int(euqation(start))] = color
+        if imgTestGray[int(start)][int(euqation(start))] == 0:
+            break
+        pair1 = (int(start),int(euqation(start)))
+    # back to start do it again,but another direction
+    start = randPt[0]
+    while True:
+        start -= 1#
+        if start < 0 or euqation(start) < 0 or start > 399 or euqation(start) >299: 
+            break
+##        print((start,euqation(start)),end=' ') # check the growth coords if u want to
+        imgTest[int(start)][int(euqation(start))] = color
+        if imgTestGray[int(start)][int(euqation(start))] == 0:
+            break
+        pair2 = (int(start),int(euqation(start)))
+    return pair1,pair2
+if __name__ == '__main__':
+    green = (0,255,0)
+    blue = (255,0,0)
+    redyellow = (0,150,255)
+    red = (0,0,255)
+    # generate num random pts
+    num = 20
+    # pattern
+    Down2Up = lambda i,j:(i-1,j)
+    Up2Down = lambda i,j:(i+1,j)
+    Right2Left = lambda i,j:(i,j-1)
+    Left2Right = lambda i,j:(i,j+1)
+    toLeftTop =lambda i,j:(i-1,j-1)
+    toRightdown = lambda i,j:(i+1,j+1)
+    toLeftdown = lambda i,j:(i+1,j-1)
+    toRightTop = lambda i,j:(i-1,j+1)
+    
+    # from loc grow with a pattern
+    ptGrowth = lambda loc, pattern:pattern(*loc)
+    
+    # get us a 400*300  arr,one channel,colored one is for visualize different growth
+    imgTest = np.zeros((400, 300, 3),np.uint8) # better generate a symmetrical shape,in case some coordinate err
+    imgTestGray = cv2.cvtColor(imgTest,cv2.COLOR_BGR2GRAY)
+
+    
+    
+    # pick a built-in rectangle draw it with black 
+    imgTest[111:200,66:299] = (255,255,255)
+    imgTestGray[111:200,66:299] = 255
+    
+    # some rand pts in white area,note that return numbers is not arg num,num is just a base number
+    randPts = generateRandomPoints(num,imgTestGray)
+    print("there are {} random pts ready!".format(len(randPts)))
+    fullPattern = [(toLeftTop,toRightdown),(Right2Left,Left2Right),(Down2Up,Up2Down),(toRightTop,toLeftdown)]
+    randPt = randPts[0]
+    
+    
+    ret3elements = [calculateTwoEdgeDistance(i,j,randPt) for i,j in fullPattern]
+
+    # stores four couples of coords
+    coords = [i[:2] for i in ret3elements]
+##        print("[Info]Four couples of coords:\n",coords)
+    # four directions` distances
+    d = [i[2] for i in ret3elements]
+##        print("[Info]Four distances:\n",d)     
+    # find max 2`s index
+    index = map(d.index, heapq.nlargest(2, d)) 
+    # find max 2
+    max2 = heapq.nlargest(2, d) 
+    # better use a temp copy
+    temp = list(index)
+    # get max 2`s coords 
+    pair1 = coords[temp[0]]
+    pair2 = coords[temp[1]]
+##    print(pair1,pair2)
+##    print(pair1[0],pair2[0])
+    # =================the first binary divide=========================
+    coord1,coord2 = drawMiddlePt(pair1,pair2,red,redyellow)
+##    print("[Info]check coords...")
+##    print("coord1:{}\ncoord2:{}".format(coord1,coord2))
+    
+    # the first equation
+    euqation1 = lambda x:float((x-coord1[0][0])*(coord1[1][1]-coord1[0][1])/\
+                                                (coord1[1][0]-coord1[0][0])+coord1[0][1])
+##    print("[Info]this is correction")
+##    print(coord1[0][0],euqation1(coord1[0][0]))
+    # the second equation
+    euqation2 = lambda x:float((x-coord2[0][0])*(coord2[1][1]-coord2[0][1])/\
+                                                (coord2[1][0]-coord2[0][0])+coord2[0][1])
+##    print("[Info]this is correction2")
+##    print(coord2[0][0],euqation2(coord2[0][0]))
+##    print("[Info]correction done")
+    
+    # left growth
+    p1,p2 = growth(randPt[0],euqation1,red,randPt)
+    # right growth
+    p3,p4 = growth(randPt[0],euqation2,redyellow,randPt) 
+    # edge point
+    [cv2.circle(imgTest,(i[1],i[0]), 4, (150,150,0), -1) for i in [p1,p2,p3,p4]]
+##    # =================the second binary divide=========================
+##    coord11,coord22 = drawMiddlePt((p1,p2),(p3,p4),blue,green)            
+##    
+##    # the first equation
+##    euqation1_1 = lambda x:float((x-coord11[0][0])*(coord11[1][1]-coord11[0][1])/\
+##                                                (coord11[1][0]-coord11[0][0])+coord11[0][1])
+##                                 
+##    euqation2_2 = lambda x:float((x-coord22[0][0])*(coord22[1][1]-coord22[0][1])/\
+##                                                (coord22[1][0]-coord22[0][0])+coord22[0][1])
+##    
+##    # left growth
+##    p11,p22 = growth(randPt[0],euqation1_1,blue,randPt)
+##    # right growth
+##    p33,p44 = growth(randPt[0],euqation2_2,green,randPt)
+##    # edge point
+##    [cv2.circle(imgTest,(i[1],i[0]), 4, (150,150,0), -1) for i in [p11,p22,p33,p44]]
+##    # =================the second binary divide=========================
+
+    
+##    whoIsLonger = lambda a,b:a if distanceOfTwoPts(*a)>distanceOfTwoPts(*b) else b
+##    getItsCoords = whoIsLonger((p1,p2),(p3,p4))
+##    print("[Info]chosen one:\n",getItsCoords)
+##    # final direction
+##    cv2.line(imgTest,(getItsCoords[1][1],getItsCoords[1][0]),\
+##             (getItsCoords[0][1],getItsCoords[0][0]),blue,2)
+    
+    # center of each with blue colored
+    cv2.circle(imgTest,(randPt[1],randPt[0]), 3, red, -1)
+    cv2.imshow('imgTest',imgTest)
+
+
+
+
+
