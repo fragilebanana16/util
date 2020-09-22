@@ -21,7 +21,7 @@ find main direction of the roads
 ## 6.socket
 learn socket
 ## 7.cvtest
-drone detection route visualization
+drone detection route visualization, where the numbers represent duplicate detection, white cover represents detected area.
 ![image](https://github.com/fragilebanana16/util/blob/master/drone1.png)
 ![image](https://github.com/fragilebanana16/util/blob/master/drone2.png)
 
