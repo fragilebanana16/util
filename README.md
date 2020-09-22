@@ -20,3 +20,8 @@ find main direction of the roads
 ![image](https://github.com/fragilebanana16/util/blob/master/post-process/v2imgs/9.png)
 ## 6.socket
 learn socket
+## 7.cvtest
+drone detection route visualization
+![image](https://github.com/fragilebanana16/util/blob/master/drone1.png)
+![image](https://github.com/fragilebanana16/util/blob/master/drone2.png)
+
